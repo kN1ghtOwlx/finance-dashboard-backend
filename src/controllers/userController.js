@@ -58,4 +58,60 @@ const addUsers = async (req, res) => {
     }
 }
 
-export {getUsers, addUsers};
+const updateUser = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if(isNaN(id)){
+            return res.status(400).json({message: "Invalid user Id!"})
+        };
+
+        const result = UpdateUserSchema.safeParse(req.body);
+        if(!result.success){
+            return res.status(400).json({message: "Validation Failed!!"})
+        };
+
+        const userExist = db.prepare('Select id from Users where id = ?').get(id);
+        if(!userExist){
+            return res.status(404).json({message: "User not found!!"})
+        };
+
+        const {name, role, status} = result.data;
+        const field = [];
+        const values = [];
+
+        if(name !== undefined){
+            field.push('name = ?'),
+            values.push(name)
+        };
+
+        if(role !== undefined){
+            field.push('role = ?'),
+            values.push(role)
+        };
+
+        if(status !== undefined){
+            status.push('status = ?'),
+            values.push(status)
+        }
+
+        if(field.length === 0){
+            return res.status(400).json({message: "No field to update!"})
+        };
+
+        values.push(id);
+        db.prepare(`Update Users Set ${field.join(', ')} Where id = ?`).run(...values);
+
+        const updatedUser = db.prepare('Select id, name, email, role, status from Users Where id = ?').get(id);
+
+        res.status(200).json({
+            message: "User data updated successfully",
+            user: updateUser
+        })
+
+    } catch (error) {
+        res.status(500).json({message: error.message});
+        console.log("Error in updateUser: ", error.message);
+    }
+}
+
+export {getUsers, addUsers, updateUser};
