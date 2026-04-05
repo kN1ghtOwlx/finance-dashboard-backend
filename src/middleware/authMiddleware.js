@@ -16,7 +16,7 @@ const authMiddleware  = async (req, res, next) => {
 
         const decoded = jwt.verify(token, process.env.JWT_KEY);
 
-        const user = db.prepare('Select id, name, email, role, status Form Users where id = ?').get(decoded.userId);
+        const user = db.prepare('Select id, name, email, role, status from Users where id = ?').get(decoded.userId);
 
         if(!user){
             return res.status(401).json({message: "User doesn't exists!"})
