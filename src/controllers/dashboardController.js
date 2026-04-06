@@ -22,6 +22,32 @@ const dashboardSummary = async (req, res) => {
         res.status(500).json({message: error.message});
         console.log("Error in dashboardSummary: ", error.message)
     }
+};
+
+const dashboardTrend = async (req, res) => {
+    try {
+        const {period = 'monthly'} = req.query;
+
+        if(!['monthly', 'weekly'].includes(period)){
+            return res.status(400).json({ message: "Period must be monthly or weekly" })
+        };
+
+        const format = period === 'weekly' ? '%Y-W%W' : '%Y-%m';
+
+        const trends = db.prepare("Select strftime(?, date) as period, round(sum(case when type = 'income' then amount else 0 end), 2) as income, round(sum(case when type = 'expense' then amount else 0 end), 2) as expenses, round(sum(case when type = 'income' then amount else -amount end), 2) as net from Finance_Records where deletedAt is NULL group by period order by period desc limit 12").all(format);
+        
+        res.status(200).json({
+            message: "Record Trend Generated!",
+            trend: {
+                period,
+                trends
+            }
+        })
+
+    } catch (error) {
+        res.status(500).json({message: error.message});
+        console.log("Error in dashboardTrend: ", error.message)
+    }
 }
 
-export {dashboardSummary};
+export {dashboardSummary, dashboardTrend};
