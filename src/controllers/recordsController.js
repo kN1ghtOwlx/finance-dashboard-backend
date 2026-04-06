@@ -156,7 +156,34 @@ const updateRecords = async (req, res) => {
     }
 }
 
-export {addRecord, getRecords, updateRecords};
+const deleteRecord = async (req, res) =>{
+    try {
+        const id = parseInt(req.params.id, 10);
+        if(isNaN(id)){
+            return res.status(400).json({message: "Invalid Record Id!"})
+        };
+
+        const recordExists = db.prepare('Select id from Finance_Records Where id = ? and deletedAt is NULL').get(id);
+        if(!recordExists){
+            return res.status(404).json({message: "Record data not found!!"})
+        };
+
+        db.prepare("Update Finance_Records set deletedAt = datetime('now') Where id = ?").run(id);
+        
+        const deletedRecord = db.prepare('Select * from Finance_Records where id = ?').get(id);
+
+        res.status(200).json({
+            message: "Record Deleted sucssefully",
+            record: deletedRecord
+        })
+
+    } catch (error) {
+        res.status(500).json({message: error.message});
+        console.log(("Error in deleteRecord: ", error.message))
+    }
+}
+
+export {addRecord, getRecords, updateRecords, deleteRecord};
 
 
 
