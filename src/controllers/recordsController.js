@@ -89,7 +89,74 @@ const getRecords = async (req, res) => {
     }
 }
 
-export {addRecord, getRecords};
+const updateRecords = async (req, res) => {
+    try {
+        const id = parseInt(req.params.id, 10);
+        if(isNaN(id)){
+            return res.status(400).json({message: "Invalid Record Id!"})
+        };
+
+        const recordExists = db.prepare('Select id from Finance_Records Where id = ? and deletedAt is NULL').get(id);
+        if(!recordExists){
+            return res.status(404).json({message: "Record data not found!!"})
+        };
+
+        const result = RecordSchema.partial().safeParse(req.body);
+        if(!result.success){
+            return res.status(400).json({
+                message: "Data Validation Failed!!",
+                error: result.error.flatten()
+            })
+        };
+
+        const {amount, type, category, date, notes} = result.data;
+        const fields = [];
+        const values = [];
+
+        if(amount !== undefined){
+            fields.push('amount = ?');   
+            values.push(amount)
+        };
+        if(type !== undefined){
+            fields.push('type = ?');     
+            values.push(type)
+        };
+        if(category !== undefined){
+            fields.push('category = ?'); 
+            values.push(category)
+        };
+        if(date !== undefined){
+            fields.push('date = ?');     
+            values.push(date)
+        };
+        if(notes !== undefined){
+            fields.push('notes = ?');    
+            values.push(notes)
+        };
+
+        if(fields.length === 0){
+            return res.status(400).json({ message: 'No field to update' })
+        };
+
+        fields.push("updatedAt = datetime('now')");
+        values.push(id);
+
+        db.prepare(`Update Finance_Records Set ${fields.join(', ')} Where id = ?`).run(...values);
+
+        const updateRecord = db.prepare('Select * from Finance_Records where id = ?').get(id);
+        
+        res.status(200).json({
+            message: "Record updated Successfully!!",
+            record: updateRecord
+        })
+
+    } catch (error) {
+        res.status(500).json({message: error.message});
+        console.log(("Error in updateRecords: ", error.message))
+    }
+}
+
+export {addRecord, getRecords, updateRecords};
 
 
 
