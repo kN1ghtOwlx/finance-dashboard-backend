@@ -39,7 +39,57 @@ const addRecord = async (req, res) =>{
     }
 }
 
-export {addRecord};
+const getRecords = async (req, res) => {
+    try {
+        const { type, category, from, to, page = '1', limit = '20' } = req.query;
+
+        const conditions = ['r.deletedAt IS NULL'];
+        const params     = [];
+
+        if(type){
+            conditions.push('r.type = ?');     
+            params.push(type); 
+        }
+        if(category){
+            conditions.push('r.category = ?'); 
+            params.push(category); 
+        }
+        if(from){
+            conditions.push('r.date >= ?');    
+            params.push(from); 
+        }
+        if(to){
+            conditions.push('r.date <= ?');    
+            params.push(to); 
+        }
+
+        const where    = `Where ${conditions.join(' and ')}`;
+        const pageNum  = Math.max(1, parseInt(page, 10));
+        const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+        const offset   = (pageNum - 1) * limitNum;
+
+        const { count: total } = db.prepare(`Select Count(*) as count From Finance_Records r ${where}`).get(...params);
+
+        const records = db.prepare(`Select r.*, u.name as createdByName from Finance_Records r Join users u on r.createdBy = u.id ${where} Order by r.date desc, r.createdAt desc limit ? offset ?`).all(...params, limitNum, offset);
+
+        res.status(401).json({
+            message: "Records found successfully",
+            record: records,
+            pagination: {
+                page:  pageNum,
+                limit: limitNum,
+                total,
+                pages: Math.ceil(total / limitNum),
+            },
+        });
+
+    } catch (error) {
+        res.status(500).json({message: error.message});
+        console.log(("Error in getReocrds: ", error.message))
+    }
+}
+
+export {addRecord, getRecords};
 
 
 
